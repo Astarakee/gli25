@@ -56,7 +56,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-#docker build . -t astarakee/brats25_gli:latest
-#docker run --rm --gpus all --network none --memory="30g" -v /mnt/workspace/data/BraTS25/GLI/sample_test:/input -v /mnt/workspace/data/BraTS25/GLI/sample_pred:/output --shm-size 4g astarakee/brats25_gli:latest
