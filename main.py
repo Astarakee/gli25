@@ -32,78 +32,76 @@ def main(input_dir: str, output_dir: str):
     4. Ensembles the predictions from the different models.
     5. Moves the final segmentation masks to the specified output directory.
     """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        base_temp_path = Path(tmpdir)
-        print(f"Using temporary directory: {base_temp_path}")
+    base_temp_path = os.path.join(tempfile.gettempdir(), "gli_temp")
+    # Define all intermediate paths relative to the temporary directory
+    paths = {
+        "orig_pre": base_temp_path + "/orig_pre",
+        "orig_post": base_temp_path + "/orig_post",
+        "nnunet_in_pre": base_temp_path + "/nnunetinput_pre",
+        "nnunet_in_post": base_temp_path + "/nnunetinput_post",
+        "nnunet_out1_pre": base_temp_path + "/nnunetpreds_pre1",
+        "nnunet_out2_pre": base_temp_path + "/nnunetpreds_pre2",
+        "nnunet_out1_post": base_temp_path + "/nnunetpreds_post1",
+        "nnunet_out2_post": base_temp_path + "/nnunetpreds_post2",
+        "nnunet_out3_post": base_temp_path + "/nnunetpreds_post3",
+        "pred_ens": base_temp_path + "/pred_ens",
+    }
 
-        # Define all intermediate paths relative to the temporary directory
-        paths = {
-            "orig_pre": base_temp_path / "orig_pre",
-            "orig_post": base_temp_path / "orig_post",
-            "nnunet_in_pre": base_temp_path / "nnunetinput_pre",
-            "nnunet_in_post": base_temp_path / "nnunetinput_post",
-            "nnunet_out1_pre": base_temp_path / "nnunetpreds_pre1",
-            "nnunet_out2_pre": base_temp_path / "nnunetpreds_pre2",
-            "nnunet_out1_post": base_temp_path / "nnunetpreds_post1",
-            "nnunet_out2_post": base_temp_path / "nnunetpreds_post2",
-            "nnunet_out3_post": base_temp_path / "nnunetpreds_post3",
-            "pred_ens": base_temp_path / "pred_ens",
-        }
+    # Create all necessary subdirectories
+    for path in paths.values():
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-        # Create all necessary subdirectories
-        for path in paths.values():
-            path.mkdir(parents=True, exist_ok=True)
+    print("Step 1: Separating pre- and post-operative data...")
+    prepost_separate(input_dir, str(paths["orig_pre"]), str(paths["orig_post"]))
 
-        print("Step 1: Separating pre- and post-operative data...")
-        prepost_separate(input_dir, str(paths["orig_pre"]), str(paths["orig_post"]))
+    # --- Pre-operative model pipeline ---
+    print("\nStep 2: Running Pre-operative Pipeline...")
+    data_prepare(str(paths["orig_pre"]), str(paths["nnunet_in_pre"]))
 
-        # --- Pre-operative model pipeline ---
-        print("\nStep 2: Running Pre-operative Pipeline...")
-        data_prepare(str(paths["orig_pre"]), str(paths["nnunet_in_pre"]))
+    run_command([
+        'nnUNetv2_predict', '-i', str(paths["nnunet_in_pre"]), '-o', str(paths["nnunet_out1_pre"]),
+        '-d', 'Dataset771_BraTSGLIPreBrainCropRegion', '-c', '3d_fullres', '-p', 'nnUNetResEncUNetPlans'
+    ])
+    run_command([
+        'mednextv1_predict', '-i', str(paths["nnunet_in_pre"]), '-o', str(paths["nnunet_out2_pre"]),
+        '-t', 'Task773_BraTSGLIPreCropLabel', '-tr', 'nnUNetTrainerV2_MedNeXt_L_kernel3',
+        '-m', '3d_fullres', '-p', 'nnUNetPlansv2.1_trgSp_1x1x1', '-f', 'all's
+    ])
 
-        run_command([
-            'nnUNetv2_predict', '-i', str(paths["nnunet_in_pre"]), '-o', str(paths["nnunet_out1_pre"]),
-            '-d', 'Dataset771_BraTSGLIPreBrainCropRegion', '-c', '3d_fullres', '-p', 'nnUNetResEncUNetPlans'
-        ])
-        run_command([
-            'mednextv1_predict', '-i', str(paths["nnunet_in_pre"]), '-o', str(paths["nnunet_out2_pre"]),
-            '-t', 'Task773_BraTSGLIPreCropLabel', '-tr', 'nnUNetTrainerV2_MedNeXt_L_kernel3',
-            '-m', '3d_fullres', '-p', 'nnUNetPlansv2.1_trgSp_1x1x1', '-f', 'all'
-        ])
+    print("Step 3: Ensembling pre-operative predictions...")
+    ens_proces_pre(str(paths["nnunet_out1_pre"]), str(paths["nnunet_out2_pre"]), str(paths["pred_ens"]))
 
-        print("Step 3: Ensembling pre-operative predictions...")
-        ens_proces_pre(str(paths["nnunet_out1_pre"]), str(paths["nnunet_out2_pre"]), str(paths["pred_ens"]))
+    # --- Post-operative model pipeline ---
+    print("\nStep 4: Running Post-operative Pipeline...")
+    data_prepare(str(paths["orig_post"]), str(paths["nnunet_in_post"]))
 
-        # --- Post-operative model pipeline ---
-        print("\nStep 4: Running Post-operative Pipeline...")
-        data_prepare(str(paths["orig_post"]), str(paths["nnunet_in_post"]))
+    run_command([
+        'nnUNetv2_predict', '-i', str(paths["nnunet_in_post"]), '-o', str(paths["nnunet_out1_post"]),
+        '-d', 'Dataset760_BraTsGLIPosCropLabel', '-c', '3d_fullres', '-p', 'nnUNetResEncUNetPlans'
+    ])
+    run_command([
+        'nnUNetv2_predict', '-i', str(paths["nnunet_in_post"]), '-o', str(paths["nnunet_out2_post"]),
+        '-d', 'Dataset763_BraTsGLIPostBrainCropRegion', '-c', '3d_fullres', '-p', 'nnUNetResEncUNetPlans'
+    ])
+    run_command([
+        'mednextv1_predict', '-i', str(paths["nnunet_in_post"]), '-o', str(paths["nnunet_out3_post"]),
+        '-t', 'Task765_BraTSGLIPostCropLabelMedNeXt', '-tr', 'nnUNetTrainerV2_MedNeXt_L_kernel3',
+        '-m', '3d_fullres', '-p', 'nnUNetPlansv2.1_trgSp_1x1x1', '-f', 'all'
+    ])
 
-        run_command([
-            'nnUNetv2_predict', '-i', str(paths["nnunet_in_post"]), '-o', str(paths["nnunet_out1_post"]),
-            '-d', 'Dataset760_BraTsGLIPosCropLabel', '-c', '3d_fullres', '-p', 'nnUNetResEncUNetPlans'
-        ])
-        run_command([
-            'nnUNetv2_predict', '-i', str(paths["nnunet_in_post"]), '-o', str(paths["nnunet_out2_post"]),
-            '-d', 'Dataset763_BraTsGLIPostBrainCropRegion', '-c', '3d_fullres', '-p', 'nnUNetResEncUNetPlans'
-        ])
-        run_command([
-            'mednextv1_predict', '-i', str(paths["nnunet_in_post"]), '-o', str(paths["nnunet_out3_post"]),
-            '-t', 'Task765_BraTSGLIPostCropLabelMedNeXt', '-tr', 'nnUNetTrainerV2_MedNeXt_L_kernel3',
-            '-m', '3d_fullres', '-p', 'nnUNetPlansv2.1_trgSp_1x1x1', '-f', 'all'
-        ])
+    print("Step 5: Ensembling post-operative predictions...")
+    ens_proces_post(
+        str(paths["nnunet_out1_post"]),
+        str(paths["nnunet_out2_post"]),
+        str(paths["nnunet_out3_post"]),
+        str(paths["pred_ens"])
+    )
 
-        print("Step 5: Ensembling post-operative predictions...")
-        ens_proces_post(
-            str(paths["nnunet_out1_post"]),
-            str(paths["nnunet_out2_post"]),
-            str(paths["nnunet_out3_post"]),
-            str(paths["pred_ens"])
-        )
+    print("\nStep 6: Moving final predictions to output directory...")
+    move_preds(str(paths["pred_ens"]), output_dir)
 
-        print("\nStep 6: Moving final predictions to output directory...")
-        move_preds(str(paths["pred_ens"]), output_dir)
-
-        print("\nPipeline finished successfully.")
+    print("\nPipeline finished successfully.")
 
 
 if __name__ == '__main__':

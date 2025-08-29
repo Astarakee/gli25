@@ -22,7 +22,7 @@ def prepost_separate(in_path, data_path_pre, data_path_post):
             dst = os.path.join(data_path_pre, item)
         elif item_order_scan == "1":
             dst = os.path.join(data_path_post, item)
-        shutil.copytree(src, dst)
+        shutil.copytree(src, dst, dirs_exist_ok=True)
     return None
 
 def data_prepare(in_path, out_path):
@@ -56,10 +56,14 @@ def data_prepare(in_path, out_path):
         t2w_dst = os.path.join(out_path, decathlon_t2w_name)
         t2f_dst = os.path.join(out_path, decathlon_t2f_name)
 
-        shutil.copy(t1n_src, t1n_dst)
-        shutil.copy(t1c_src, t1c_dst)
-        shutil.copy(t2w_src, t2w_dst)
-        shutil.copy(t2f_src, t2f_dst)
+        if not os.path.exists(t1n_dst):
+            shutil.copy(t1n_src, t1n_dst)
+        if not os.path.exists(t1c_dst):
+            shutil.copy(t1c_src, t1c_dst)
+        if not os.path.exists(t2w_dst):
+            shutil.copy(t2w_src, t2w_dst)
+        if not os.path.exists(t2f_dst):
+            shutil.copy(t2f_src, t2f_dst)
 
     print('-' * 8)
     print('All files were reformated, ready for segmentation!')
