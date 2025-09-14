@@ -91,6 +91,8 @@ def remove_additional_label(save_path_preds, save_path_preds_labelRemoved, remov
     :param remove_label: Integer showing the label to be removed
     :return:
     """
+    if not os.path.exists(save_path_preds_labelRemoved):
+        os.makedirs(save_path_preds_labelRemoved)
     pred_files = path_contents_pattern(save_path_preds, ".nii.gz")
     for pred_mask in pred_files:
         src_pred = os.path.join(save_path_preds, pred_mask)

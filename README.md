@@ -4,21 +4,21 @@ This repository contains a pipeline for the segmentation of Glioma in pre-treatm
 
 ## Overview
 
-The pipeline processes multi-modal MRI scans (T1-weighted pre-contrast, T1-weighted post-contrast, T2-weighted, and T2-FLAIR) to produce segmentation masks of different tumor sub-regions. It leverages an ensemble of deep learning models to achieve robust and accurate results.
+The pipeline processes multi-modal MRI scans (T1-weighted pre-contrast, T1-weighted post-contrast, T2-weighted, and T2-FLAIR) to produce segmentation masks of different tumor sub-regions.
 
 The workflow is as follows:
-1.  **Data Separation**: Pre- and post-operative scans are separated based on their filenames.
-2.  **Inference**: Separate segmentation models are run on the pre- and post-operative data.
-3.  **Ensembling**: The predictions from the different models are combined to generate a final segmentation.
+1.  **Data Separation**: Renaming the data into Decathlon filenaming convention.
+2.  **Inference**:  segmentation model is run on the Decathlon formated data by using a trained model based on nnUnet.
+3.  **LabelRemoval**: The model was trained to segment an additional context label which will be removed in this step.
 4.  **Output**: The final segmentation masks are saved to a specified output directory.
 
 ## Dependencies
 
 This pipeline relies on the following pre-installed models:
 *   [nnU-Net](https://github.com/MIC-DKFZ/nnUNet)
-*   [MedNeXt](https://github.com/MIC-DKFZ/MedNeXt)
+Please download the model checkpoint and put it in the right directory which is available in your environment's PATH
 
-Please ensure that these frameworks are properly installed and their prediction scripts (`nnUNetv2_predict` and `mednextv1_predict`) are available in your environment's PATH.
+e.g. `export nnUNet_results="env PATH"` 
 
 ## Data Preparation
 
@@ -29,21 +29,36 @@ The input data must follow the BraTS standard naming convention. Each subject's 
 *   `...-t2w.nii.gz`: T2-weighted
 *   `...-t2f.nii.gz`: T2-FLAIR
 
-Example directory structure:
+An example of the data format that this model works with is:
 ```
-input_directory/
-└── BraTS-GLI-00001-000/
-    ├── BraTS-GLI-00001-000-t1c.nii.gz
-    ├── BraTS-GLI-00001-000-t1n.nii.gz
-    ├── BraTS-GLI-00001-000-t2f.nii.gz
-    └── BraTS-GLI-00001-000-t2w.nii.gz
-└── BraTS-GLI-00002-001/
-    ├── BraTS-GLI-00002-001-t1c.nii.gz
-    ├── BraTS-GLI-00002-001-t1n.nii.gz
-    ├── BraTS-GLI-00002-001-t2f.nii.gz
-    └── BraTS-GLI-00002-001-t2w.nii.gz
-...
+├── BraTS-GLI-00001-000
+│   ├── BraTS-GLI-00001-000-t1c.nii.gz
+│   ├── BraTS-GLI-00001-000-t1n.nii.gz
+│   ├── BraTS-GLI-00001-000-t2f.nii.gz
+│   └── BraTS-GLI-00001-000-t2w.nii.gz
+├── BraTS-GLI-00001-001
+│   ├── BraTS-GLI-00001-001-t1c.nii.gz
+│   ├── BraTS-GLI-00001-001-t1n.nii.gz
+│   ├── BraTS-GLI-00001-001-t2f.nii.gz
+│   └── BraTS-GLI-00001-001-t2w.nii.gz
+├── BraTS-GLI-00013-000
+│   ├── BraTS-GLI-00013-000-t1c.nii.gz
+│   ├── BraTS-GLI-00013-000-t1n.nii.gz
+│   ├── BraTS-GLI-00013-000-t2f.nii.gz
+│   └── BraTS-GLI-00013-000-t2w.nii.gz
+├── BraTS-GLI-00013-001
+│   ├── BraTS-GLI-00013-001-t1c.nii.gz
+│   ├── BraTS-GLI-00013-001-t1n.nii.gz
+│   ├── BraTS-GLI-00013-001-t2f.nii.gz
+│   └── BraTS-GLI-00013-001-t2w.nii.gz
+└── BraTS-GLI-00015-000
+    ├── BraTS-GLI-00015-000-t1c.nii.gz
+    ├── BraTS-GLI-00015-000-t1n.nii.gz
+    ├── BraTS-GLI-00015-000-t2f.nii.gz
+    └── BraTS-GLI-00015-000-t2w.nii.gz
 ```
+
+
 
 ## Usage
 
@@ -60,8 +75,6 @@ python main.py -i /path/to/your/input_data -o /path/to/your/output_directory
 The final segmentation masks will be saved in the output directory with the same naming convention as the input subjects.
 
 ### Checkpoints
-All model checkpoints can be found from the following [Gdrive](https://drive.google.com/drive/folders/1-vapUxHYaedN-vvjr-LrG0rQLH_zWkME?usp=sharing)
-Please follow `nnU-Net` and `MedNeXt` instructions to properly integrate the model checkpoints.
-Generally speaking, the model names begin with `Dataset` belong to `nnUnetV2` pipeline while those begings with `Task` 
-belong to `MedNeXt` pipeline.
+model checkpoints can be found from the following [Gdrive](https://drive.google.com/drive/folders/1-vapUxHYaedN-vvjr-LrG0rQLH_zWkME?usp=sharing)
 
+please download, and unzip it, then put `Dataset771_BraTSGLIPreBrainCropRegion` into the `nnUNet_results PATH`.
