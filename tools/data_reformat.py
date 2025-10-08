@@ -6,25 +6,6 @@ from tools.writer import write_nifti_from_itk, write_nifti_from_vol
 from tools.paths_dirs_stuff import path_contents_pattern, path_contents, create_path
 
 
-def prepost_separate(in_path, data_path_pre, data_path_post):
-    """
-    separating the pre from post treatmemnt data based in BaTS naming convention
-    :param in_path: path to input directory containing all data; each subject are presented in a separate folder
-    :param data_path_pre: abs path to copy the pre operative data
-    :param data_path_post: abs path to copy the post operative data
-    :return:
-    """
-    subjects = path_contents(in_path)
-    for item in subjects:
-        src = os.path.join(in_path, item)
-        item_order_scan = item[-3]
-        if item_order_scan == "0":
-            dst = os.path.join(data_path_pre, item)
-        elif item_order_scan == "1":
-            dst = os.path.join(data_path_post, item)
-        shutil.copytree(src, dst, dirs_exist_ok=True)
-    return None
-
 def data_prepare(in_path, out_path):
     """
     reformulate the standard brats data structure into Decathlon file naming convention
@@ -34,6 +15,10 @@ def data_prepare(in_path, out_path):
     """
     print('-'*8)
     subjects = path_contents(in_path)
+    out_path_img = os.path.join(out_path, "imagesTr")
+    out_path_mask = os.path.join(out_path, "labelsTr")
+    create_path(out_path_img)
+    create_path(out_path_mask)
     n_subjects = len(subjects)
     for ix, case in enumerate(subjects):
         print("data reformat in process for case {} out of {} ...".format(ix + 1, n_subjects))
@@ -43,18 +28,22 @@ def data_prepare(in_path, out_path):
         case_t1c = path_contents_pattern(case_path, 't1c.nii.gz')[0]
         case_t2w = path_contents_pattern(case_path, 't2w.nii.gz')[0]
         case_t2f = path_contents_pattern(case_path, 't2f.nii.gz')[0]
+        case_sg = path_contents_pattern(case_path, 'seg.nii.gz')[0]
         decathlon_t1n_name = case+'_0000.nii.gz'
         decathlon_t1c_name = case+'_0001.nii.gz'
         decathlon_t2w_name = case+'_0002.nii.gz'
         decathlon_t2f_name = case+'_0003.nii.gz'
+        decathlon_sg_name = case + '.nii.gz'
         t1n_src = os.path.join(case_path, case_t1n)
         t1c_src = os.path.join(case_path, case_t1c)
         t2w_src = os.path.join(case_path, case_t2w)
         t2f_src = os.path.join(case_path, case_t2f)
-        t1n_dst = os.path.join(out_path, decathlon_t1n_name)
-        t1c_dst = os.path.join(out_path, decathlon_t1c_name)
-        t2w_dst = os.path.join(out_path, decathlon_t2w_name)
-        t2f_dst = os.path.join(out_path, decathlon_t2f_name)
+        sg_src = os.path.join(case_path, case_sg)
+        t1n_dst = os.path.join(out_path_img, decathlon_t1n_name)
+        t1c_dst = os.path.join(out_path_img, decathlon_t1c_name)
+        t2w_dst = os.path.join(out_path_img, decathlon_t2w_name)
+        t2f_dst = os.path.join(out_path_img, decathlon_t2f_name)
+        sg_dst = os.path.join(out_path_mask, decathlon_sg_name)
 
         if not os.path.exists(t1n_dst):
             shutil.copy(t1n_src, t1n_dst)
@@ -64,6 +53,8 @@ def data_prepare(in_path, out_path):
             shutil.copy(t2w_src, t2w_dst)
         if not os.path.exists(t2f_dst):
             shutil.copy(t2f_src, t2f_dst)
+        if not os.path.exists(sg_dst):
+            shutil.copy(sg_src, sg_dst)
 
     print('-' * 8)
     print('All files were reformated, ready for segmentation!')
@@ -103,55 +94,3 @@ def remove_additional_label(save_path_preds, save_path_preds_labelRemoved, remov
 
     return None
 
-
-def ens_proces_pre(nnunet_out1_pre, nnunet_out2_pre, model_ens_path_PrePost):
-    """
-    Experimental label merging among the predcted masks by different models for pre-treatment Glioma
-    :param nnunet_out1_pre: Abs path where the raw prediciton from the 1st model are stored
-    :param nnunet_out2_pre: Abs path where the raw prediciton from the 2nd model are stored
-    :param model_ens_path_PrePost: Abs path where the merged labels will be saved
-    :return:
-    """
-    pred_list1 = path_contents_pattern(nnunet_out1_pre, ".nii.gz")
-    for item in pred_list1:
-        src_item1 = os.path.join(nnunet_out1_pre, item)
-        src_item2 = os.path.join(nnunet_out2_pre, item)
-        dst_item = os.path.join(model_ens_path_PrePost, item)
-        img_array, img_itk, img_size, img_spacing, img_origin, img_direction = read_nifti(src_item1)
-        img_array2, _, _, _, _, _ = read_nifti(src_item2)
-        new_array = np.zeros_like(img_array)
-        new_array[img_array2 == 3] = 3
-        new_array[img_array2 == 1] = 1
-        new_array[img_array == 2] = 2
-        write_nifti_from_vol(new_array, img_origin, img_spacing, img_direction, dst_item)
-    return None
-
-
-def ens_proces_post(nnunet_out1_post, nnunet_out2_post, nnunet_out3_post, model_ens_path_PrePost):
-    """
-    Experimental label merging among the predcted masks by different models for post-treatment Glioma
-    :param nnunet_out1_post:Abs path where the raw prediciton from the 1st model are stored
-    :param nnunet_out2_post:Abs path where the raw prediciton from the 2nd model are stored
-    :param nnunet_out3_post:Abs path where the raw prediciton from the 3rd model are stored
-    :param model_ens_path_PrePost: Abs path where the merged labels will be saved
-    :return:
-    """
-    pred_list1 = path_contents_pattern(nnunet_out1_post, ".nii.gz")
-    for item in pred_list1:
-        src_item1 = os.path.join(nnunet_out1_post, item)
-        src_item2 = os.path.join(nnunet_out2_post, item)
-        src_item3 = os.path.join(nnunet_out3_post, item)
-        dst_item = os.path.join(model_ens_path_PrePost, item)
-        img_array, img_itk, img_size, img_spacing, img_origin, img_direction = read_nifti(src_item1)
-        img_array2, _, _, _, _, _ = read_nifti(src_item2)
-        img_array3, _, _, _, _, _ = read_nifti(src_item3)
-
-        new_array = np.zeros_like(img_array)
-        new_array[img_array == 2] = 2  # SNFH
-        new_array[img_array2 == 3] = 3  # ET
-        new_array[img_array3 == 1] = 1  # NETC
-        new_array[img_array3 == 4] = 4  # RC
-
-        write_nifti_from_vol(new_array, img_origin, img_spacing, img_direction, dst_item)
-
-    return None
