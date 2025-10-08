@@ -12,7 +12,7 @@ from nnunetv2.paths import nnUNet_preprocessed, nnUNet_results, nnUNet_raw
 # --- Define the IDs and paths for your datasets and models ---
 
 # ABS path to the raw data directory: each subject has its own folder with BraTS namind convention
-RAW_DATA_PATH = "/mnt/workspace/data/00_junks/Akis_temp/sample_data"
+RAW_DATA_PATH = "PATH_TO_SAMPLE_RAW_DATA"
 
 # The Dataset ID of the model you want to use for pre-training.
 # This model's architecture and plans will be transferred to your new dataset.
@@ -28,7 +28,7 @@ FINETUNE_PLANS_ID = 'nnUNetPlans_finetune_from_brats'
 
 # The full path to the pre-trained model's checkpoint file.
 # This file contains the weights that will be used to initialize your new model.
-PRETRAINED_CHECKPOINT_PATH = '/mnt/workspace/data/00_junks/temp_akis/Dataset770_BraTSGLIPreCropRegion/nnUNetTrainer__nnUNetResEncUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
+PRETRAINED_CHECKPOINT_PATH = '<nnUNet_results>/Dataset770_BraTSGLIPreCropRegion/nnUNetTrainer__nnUNetResEncUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
 
 # The GPU device to use for training.
 # DEVICE = torch.device('cuda')
@@ -43,11 +43,11 @@ N_EPOCHS = 3
 INIT_LR = 1e-3
 
 # ABS Path to the folder where testing data is located
-INPUT_FOLDER_INFER = '/mnt/workspace/data/00_junks/Akis_temp/decathlon'
+INPUT_FOLDER_INFER = 'PATH_TO_TESTING_DATA'
 
 # ABS Path to the folder where the results of inference will be saved
-OUTPUT_FOLDER_INFER_FINETUNE = '/mnt/workspace/data/00_junks/Akis_temp_out/Finetune'
-OUTPUT_FOLDER_INFER_PRETRAINED = '/mnt/workspace/data/00_junks/Akis_temp_out/PreTrained'
+OUTPUT_FOLDER_INFER_FINETUNE = 'PATH_TO_SAVE_RESULTS_FINETUNE'
+OUTPUT_FOLDER_INFER_PRETRAINED = 'PATH_TO_SAVE_RESULTS_PRETRAINED'
 
 
 if __name__ == '__main__':
